@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!--
+  Customize this policy to fit your own app's needs. For more guidance, see:
+      https://github.com/apache/cordova-plugin-whitelist/blob/master/README.md#content-security-policy
+  Some notes:
+    * gap: is required only on iOS (when using UIWebView) and is needed for JS->native communication
+    * https://ssl.gstatic.com is required only on Android and is needed for TalkBack to function properly
+    * Disables use of inline scripts in order to mitigate risk of XSS vulnerabilities. To change this:
+      * Enable inline JS: add 'unsafe-inline' to default-src
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: gap: content:">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, minimum-scale=1, minimal-ui, viewport-fit=cover">
+
+  <meta name="theme-color" content="#007aff">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="msapplication-tap-highlight" content="no">
+  <title>PlaySoccer</title>
+
+  <!-- built styles file will be auto injected -->
+</head>
+<body>
+  <div id="app">
+    <!-- Your main view, should have "view-main" class -->
+    <div class="panel panel-left panel-reveal panel-init padding-left padding-top">
+      <div class="page dark-theme">
+        <div class="page-content color-theme-clear">
+          <div class="list no-hairlines no-hairlines-between">
+            <ul>
+              <li>
+                <a href="/profile" id="profile" class="item-link item-content no-chevron panel-close">
+                  <div class="item-media"><i class="icon f7-icons">person</i></div>
+                  <div class="item-inner">
+                    <div class="item-title">
+                      Profile
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li>
+                <a href="/my-events" id="my-events" class="item-link item-content no-chevron panel-close">
+                  <div class="item-media"><i class="icon f7-icons">star</i></div>
+                  <div class="item-inner">
+                    <div class="item-title">
+                      My events
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li>
+                <a href="/page-not-found" class="item-link item-content no-chevron panel-close">
+                  <div class="item-media"><i class="icon f7-icons">bubble_right</i></div>
+                  <div class="item-inner">
+                    <div class="item-title">
+                      Messages
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li>
+                <a href="/page-not-found" class="item-link item-content no-chevron panel-close">
+                  <div class="item-media"><i class="icon f7-icons">envelope_badge</i></div>
+                  <div class="item-inner">
+                    <div class="item-title">
+                      Notifications
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li>
+                <a href="/page-not-found" class="item-link item-content no-chevron panel-close">
+                  <div class="item-media"><i class="icon f7-icons">gear_alt</i></div>
+                  <div class="item-inner">
+                    <div class="item-title">
+                      Settings
+                    </div>
+                  </div>
+                </a>
+              </li>
+              <li>
+                <a href="#" id="logout-button" class="item-link item-content no-chevron panel-close">
+                  <div class="item-media"><i class="icon f7-icons">delete_left</i></div>
+                  <div class="item-inner">
+                    <div class="item-title">
+                      Logout
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <div class="view view-main view-init safe-areas" data-url="/"></div>
+
+  </div>
+  <% if (process.env.TARGET === 'cordova') { %>
+  <script src="cordova.js"></script>
+  <% } %>
+  <!-- built script files will be auto injected -->
+</body>
+</html>

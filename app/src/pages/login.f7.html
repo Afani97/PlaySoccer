@@ -1,0 +1,91 @@
+<template>
+  <div class="page">
+    <div class="page-content" role="main">
+      <h1 class="block-title block-title-large">PlaySoccer</h1>
+      <div class="list no-hairlines-md">
+        <ul>
+          <li class="item-content item-input">
+            <div class="item-inner">
+              <div class="item-title item-label">Email</div>
+              <div class="item-input-wrap">
+                <input aria-label="email" type="email" id="login-email" placeholder="Your email" required validate>
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+          <li class="item-content item-input">
+            <div class="item-inner">
+              <div class="item-title item-label">Password</div>
+              <div class="item-input-wrap">
+                <input aria-label="password" type="password" id="login-password" placeholder="Your password" required validate>
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+          <li class="item-content item-input margin-top">
+            <div class="item-inner">
+                <button aria-label="login button" id="login-btn" class="button button-round button-fill" @click="login()">Log In</button>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- <div class="display-flex justify-content-center register-button">
+        <a id="register-btn" href="/register">Not a member? Register today!</a>
+      </div> -->
+
+    </div>
+  </div>
+</template>
+<script>
+  import $$ from 'dom7'
+import ApiService from '../js/ApiService.js'
+export default {
+
+    data: function () {
+      return {
+
+      }
+    },
+    methods: {
+      login: function () {
+        const self = this
+        const app = self.$app
+
+        const email = $$('#login-email').val()
+        const password = $$('#login-password').val()
+
+        if (email === '' || password === '') {
+          app.toast.create({
+            text: 'Email or password cannot be empty',
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+          return
+        }
+
+        const data = {
+          email: email,
+          password: password
+        }
+
+        ApiService.post('auth/login', data, function (data) {
+          console.log('SUCCESS', data.msg)
+          window.sessionStorage.setItem("userId", data.user.id)
+          self.$f7router.navigate({ name: 'main' })
+        }, function (data) {
+          app.toast.create({
+            text: 'Error logging in.',
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+          console.log('ERROR', data.msg)
+        })
+      }
+    },
+    on: {
+      pageInit: function () {
+      }
+    }
+  }
+</script>

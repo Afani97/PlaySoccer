@@ -1,0 +1,10 @@
+__pycache__/
+venv/
+.flaskenv
+app/*.pyc
+.idea
+geckodriver.log
+a11y.json
+.vscode/
+python.log
+pytest.ini

@@ -1,0 +1,196 @@
+<template>
+  <div class="popup" id="view-event-page">
+    <div class="view">
+      <div class="page">
+        <div class="navbar">
+          <div class="navbar-bg"></div>
+          <div class="navbar-inner sliding">
+            <div class="left margin popup-close close-view-event">
+                <i class="f7-icons font-16">xmark</i>
+                <span class="font-16"> Close </span>
+            </div>
+            <div class="title" id='event-title'>{{event.title}}</div>
+          </div>
+        </div>
+
+        <div class="page-content">
+          <div class="list no-hairlines no-hairlines-between">
+            <ul>
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Where?</div>
+                  <div>
+                    <label>{{event.location}}</label>
+                    <label><small>(5 mi.)</small></label>
+                  </div>
+                </div>
+              </li>
+
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">When?</div>
+                    <div>
+                      <label>{{event.formattedDate}}</label>
+                    </div>
+                  </div>
+              </li>
+
+              {{#js_if "this.event.description !== null"}}
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div>
+                    <button type="button" class="button button-small"
+                            @click="viewMoreDetails()">View more</button>
+                  </div>
+                </div>
+              </li>
+              {{/js_if}}
+
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Who's hosting?</div>
+                  <div>
+                    <div class="display-flex align-items-center margin-vertical">
+                      <div class="display-flex align-items-flex-end">
+                        <img src="../static/images/placeholder.png" alt="event creator user image" id="profile-img" width="50" height="50"
+                          class="br-50" />
+                      </div>
+                      <div class="display-block margin-left">
+                        <div> {{event.created_by_user_name}} </div>
+                        <small> {{event.created_by_user_company}} </small>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </li>
+
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Who's in?</div>
+                  <div class="item-input-wrap">
+                    <div class="whos-in">
+                      {{#each event.current_members}}
+                      <div class="display-flex align-items-center margin-vertical">
+                        <div class="display-flex align-items-flex-end">
+                          <img src="../static/images/placeholder.png" id="member-img-{{@index}}"width="50" height="50"
+                          class="br-50" />
+                        </div>
+                        <div class="display-block margin-left">
+                          <div> {{first_name}} {{last_name}} </div>
+                          <small> {{current_job}} </small>
+                        </div>
+                      </div>
+                      {{else}}
+                      <div class="display-flex align-items-center margin-vertical">
+                        <div class="display-block">
+                          <div> No one has joined yet 😞</div>
+                        </div>
+                      </div>
+                      {{/each}}
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</template>
+<script>
+  import $$ from 'dom7'
+import moment from 'moment'
+import ApiService from '../js/ApiService.js'
+
+export default {
+
+    data: function () {
+      const params = this.$route.params
+      let eventId = ''
+      if (params.id) {
+        eventId = params.id
+      }
+      return {
+        eventId: eventId,
+        event: {}
+      }
+    },
+    methods: {
+      viewMoreDetails () {
+        const self = this
+        const app = self.$app
+        app.dialog.create({
+          animate: true,
+          title: 'Description',
+          text: self.event.description,
+          closeByBackdropClick: true,
+          buttons: [
+            {
+              text: 'OK',
+              bold: true
+            }
+          ]
+        }).open()
+      },
+      getEventDetails () {
+        const self = this
+        const app = self.$app
+
+        app.preloader.show()
+        ApiService.get('events/' + self.eventId, function (data) {
+          console.log('SUCCESS', data.msg)
+          app.preloader.hide()
+          data.event.formattedDate = moment(data.event.timestamp).utc(true).format('lll')
+          self.$setState({ event: data.event })
+          self.getProfileImage(data.event.created_by, 'profile-img')
+          data.event.current_members.forEach((member, idx) => self.getProfileImage(member.id, 'member-img-' + idx))
+        }, function (data) {
+          console.log('ERROR', data.msg)
+          app.preloader.hide()
+        })
+      },
+      getProfileImage (userId, id) {
+        fetch(ApiService.getApiEndpoint() + 'profile/get_profile_image/' + userId, {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store'
+        })
+          .then(res => {
+            if (res.status === 200) {
+              return res.blob()
+            }
+          })
+          .then(blob => {
+            var reader = new FileReader()
+            reader.readAsDataURL(blob)
+            reader.onloadend = function () {
+              $$('#' + id).attr('src', reader.result)
+            }
+          })
+          .catch(error => {
+            console.log('ERROR', error)
+          })
+      }
+    },
+    on: {
+      popupOpen: function () {
+        const self = this
+        const app = self.$app
+
+        var calendarDateTime = app.calendar.create({ // eslint-disable-line no-unused-vars
+          inputEl: '#demo-calendar-date-time',
+          timePicker: true,
+          openIn: 'customModal',
+          header: true,
+          footer: true,
+          dateFormat: { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' }
+        })
+
+        self.getEventDetails()
+      }
+    }
+  }
+</script>

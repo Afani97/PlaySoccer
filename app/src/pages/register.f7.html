@@ -1,0 +1,141 @@
+<template>
+  <div class="page" role="main">
+    <div class="page-content">
+      <h1 class="block-title block-title-large">PlaySoccer</h1>
+      <div class="list no-hairlines-md">
+        <ul>
+          <li class="item-content item-input">
+            <div class="item-inner">
+              <div class="item-title item-label">First name</div>
+              <div class="item-input-wrap">
+                <input aria-label="first name" type="text" id="register-name" placeholder="Your first name" required validate>
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+          <li class="item-content item-input margin-bottom">
+            <div class="item-inner">
+              <div class="item-title item-label">Current zip</div>
+              <div class="item-input-wrap">
+                <input aria-label="your current zipcode to find the nearest events" type="number" id="register-zip" placeholder="Your current zip to find the nearest events" required validate>
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+          <li class="item-content item-input margin-top">
+            <div class="item-inner">
+              <div class="item-title item-label">Email</div>
+              <div class="item-input-wrap">
+                <input aria-label="email" type="email" id="register-email" placeholder="Your email" required validate>
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+          <li class="item-content item-input">
+            <div class="item-inner">
+              <div class="item-title item-label">Password</div>
+              <div class="item-input-wrap">
+                <input aria-label="password" type="password" id="register-password" placeholder="Your password" required validate>
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+          <li class="item-content item-input">
+            <div class="item-inner">
+              <div class="item-title item-label">Confirm Password</div>
+              <div class="item-input-wrap">
+                <input aria-label="confirm password" type="password" id="register-confirm" placeholder="Confirm your password" required validate>
+                <span class="input-clear-button"></span>
+              </div>
+            </div>
+          </li>
+          <li class="item-content item-input margin-vertical">
+            <div class="item-inner">
+                <button aria-label="register button" id='register-button' class="button button-round button-fill" @click="register()">Register</button>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="display-flex justify-content-center register-button">
+        <a href="/login">Already a member? Login!</a>
+      </div>
+
+    </div>
+  </div>
+</template>
+<script>
+  import $$ from 'dom7'
+import ApiService from '../js/ApiService.js'
+
+export default {
+
+    data: function () {
+      return {
+
+      }
+    },
+    methods: {
+      register: function () {
+        const self = this
+        const app = self.$app
+
+        const name = $$('#register-name').val()
+        const zip = $$('#register-zip').val()
+        const email = $$('#register-email').val()
+        const password = $$('#register-password').val()
+        const confirmPassword = $$('#register-confirm').val()
+
+        if (name === '' || zip === '' || email === '') {
+          app.toast.create({
+            text: 'Name, zip and email have to be filled in',
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+          return
+        }
+
+        if (password === '' || (password !== confirmPassword)) {
+          app.toast.create({
+            text: 'Passwords need to be matching',
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+          return
+        }
+
+        const data = {
+          name: name,
+          zip: zip,
+          email: email,
+          password: password
+        }
+
+        ApiService.post('auth/register', data, function (data) {
+          console.log('SUCCESS', data.msg)
+          window.sessionStorage.setItem("userId", data.user.id)
+          self.$f7router.navigate({ name: 'main' })
+        }, function (data) {
+          console.log('ERROR', data.msg)
+          if (data.status === 401) {
+            app.toast.create({
+              text: 'Account already associated with that email',
+              position: 'center',
+              closeTimeout: 2000
+            }).open()
+            return
+          }
+          app.toast.create({
+            text: 'Error registering',
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+        })
+      }
+    },
+    on: {
+      pageInit: function () {
+      }
+    }
+  }
+</script>

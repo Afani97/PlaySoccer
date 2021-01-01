@@ -1,0 +1,237 @@
+<template>
+  <div class="page" id="home-page">
+    <nav class="navbar navbar-large">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="left">
+          <a class="panel-open link icon-only" id="open-left-panel" href="#" data-panel=".panel-left">
+            <i class="icon f7-icons" id="menu-icon">bars</i>
+          </a>
+        </div>
+        <h1 class="title">Events</h1>
+        <!-- Large title element -->
+        <div class="title-large">
+          <div class="title-large-text">Events</div>
+        </div>
+      </div>
+    </nav>
+
+    
+
+    <div class="page-content ptr-content ptr-bottom" role="main">
+
+      <div class="fab fab-extended fab-right-bottom">
+        <a href="/new-event" id="new-event">
+          <i class="icon f7-icons">plus</i>
+        </a>
+      </div>
+
+      <div class="list media-list no-hairlines margin-top-half">
+        <ul class="margin-horizontal-half round-li">
+          {{#each events}}
+          <li class="margin-vertical-half">
+            <div class="item-content">
+              <div class="item-inner">
+                <a href="/view-event/{{id}}" class="item-title-row item-link">
+                    <div class="item-title"> {{title}} </div>
+                    <div class="item-after font-700"> {{location}} </div>
+                </a>
+                <div class="item-text margin-bottom font-500">{{formattedDate}}</div>
+                <div class="display-flex justify-content-space-between">
+                  <div class="display-flex align-items-center">
+                    <div class="display-flex align-items-flex-end">
+                      <img src="../static/images/placeholder.png" alt="profile image" id="profile-img-{{@index}}" class="br-50" width="20" height="20"/>
+                    </div>
+                    <div class="display-flex align-items-center ml-3">
+                      <div class="font-14 ml-3"> {{createdByUserName}} </div>
+                      <div class="font-11 ml-3"> &bull; </div>
+                      <div class="font-11 ml-3"> {{created_by_user_company}} </div>
+                    </div>
+                  </div>
+
+                  {{#js_if "this.hideButton === false"}}
+                  <div>
+                    <button type="button" class="button button-fill button-small event-btn"
+                            @click="requestToJoin('{{@index}}')">
+                        Request to join!
+                    </button>
+                  </div>
+                  {{/js_if}}
+                </div>
+              </div>
+            </div>
+          </li>
+          {{else}}
+          <li>
+            <h1 class="text-align-center">No events found....</h1>
+          </li>
+          {{/each}}
+        </ul>
+      </div>
+      <div class="ptr-preloader">
+        <div class="preloader"></div>
+        <div class="ptr-arrow"></div>
+      </div>
+
+    </div>
+  </div>
+</template>
+<script>
+  import $$ from 'dom7'
+import moment from 'moment'
+import ApiService from '../js/ApiService.js'
+
+export default {
+    data: function () {
+      return {
+        events: [],
+        userId: '',
+        currentPage: 1
+      }
+    },
+    methods: {
+      getEvents () {
+        const self = this
+        const app = self.$app
+        const currentPage = self.currentPage
+
+        app.preloader.show()
+        ApiService.get('events/list?page=' + currentPage, function (data) {
+          console.log('SUCCESS', data.msg)
+          self.$setState({ currentPage: currentPage + 1 })
+          app.preloader.hide()
+          data.events.forEach(e => {
+            e.formattedDate = moment(e.timestamp).utc(true).format('lll')
+            const userName = e.created_by_user_name.split(' ')
+            e.createdByUserName = userName[0] + ' ' + userName[1].charAt(0)
+
+            let hideButton = false
+            if (e.created_by === self.userId) {
+              hideButton = true
+            }
+            if (e.current_members.length > 0) {
+              const currentMembers = e.current_members.map(m => m.id)
+              if (currentMembers.includes(self.userId)) {
+                hideButton = true
+              }
+            }
+            e.hideButton = hideButton
+          })
+          const oldEvents = self.events
+          const oldEventIds = oldEvents.map(e => e.id)
+          const events = data.events.filter(e => !oldEventIds.includes(e.id))
+          const eventArr = [...oldEvents, ...events]
+          self.$setState({ events: eventArr })
+          for (let i = oldEvents.length; i < events.length; i++) {
+            self.getProfileImage(events[i], i)
+          }
+        }, function (data) {
+          console.log('ERROR', data.msg)
+          app.preloader.hide()
+        })
+      },
+      requestToJoin (eventIndex) {
+        const self = this
+        const app = self.$app
+        const event = self.events[eventIndex]
+        const data = {
+          event_id: event.id
+        }
+        app.preloader.show()
+        ApiService.put('events/join_event', data, function (data) {
+          console.log('SUCCESS', data.msg)
+          app.preloader.hide()
+          app.toast.create({
+            text: data.msg,
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+          event.hideButton = true
+          self.events[eventIndex] = event
+          self.$update()
+        }, function (data) {
+          console.log('ERROR', data.msg)
+          app.preloader.hide()
+          app.toast.create({
+            text: data.msg,
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+        })
+      },
+      getProfileImage (event, index) {
+        fetch(ApiService.getApiEndpoint() + 'profile/get_profile_image/' + event.created_by, {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store'
+        })
+          .then(res => {
+            if (res.status === 200) {
+              return res.blob()
+            }
+          })
+          .then(blob => {
+            var reader = new FileReader()
+            reader.readAsDataURL(blob)
+            reader.onloadend = function () {
+              $$('#profile-img-' + index).attr('src', reader.result)
+            }
+          })
+          .catch(error => {
+            console.log('ERROR', error)
+          })
+      }
+    },
+    on: {
+      pageInit: function () {
+        const self = this
+        const app = self.$app
+
+        self.$setState({ userId: window.sessionStorage.getItem('userId') })
+
+        // Dom Events
+        $$('.panel-left').on('panel:open', function () {
+          $$('#menu-icon').html('multiply')
+        })
+
+        $$('.panel-left').on('panel:close', function () {
+          $$('#menu-icon').html('bars')
+        })
+
+        self.popupSwipeHandler = app.popup.create({
+          el: '.demo-popup-swipe-handler',
+          swipeToClose: 'to-bottom',
+          swipeHandler: '.swipe-handler'
+        })
+
+        $$('#logout-button').on('click', function () {
+          ApiService.get("auth/logout", function(data) {
+            console.log("SUCCESS", data.msg)
+            self.$f7router.navigate({name: "login"})
+          }, function(data) {
+            console.log("ERROR", data.msg)
+          })
+        })
+      },
+      pageBeforeIn: function () {
+        const self = this
+        const app = self.$app
+
+        self.$setState({ events: [], currentPage: 1 })
+
+        self.getEvents()
+
+        const ptrContent = $$('.ptr-content')
+        ptrContent.on('ptr:refresh', function () {
+          self.getEvents()
+          app.ptr.done()
+        })
+
+        app.on('refreshEvents', function () {
+          self.$setState({ currentPage: 1 })
+          self.getEvents()
+        })
+      }
+    }
+  }
+</script>

@@ -1,0 +1,169 @@
+<template>
+  <div class="popup" id="new-event-page">
+    <div class="view">
+      <div class="page">
+        <nav class="navbar">
+          <div class="navbar-bg"></div>
+          <div class="navbar-inner sliding">
+            <div class="left margin-left-half popup-close">
+              <i class="f7-icons font-16">xmark</i>
+              <span class="font-16"> Cancel </span>
+            </div>
+            <h1 class="title">New event</h1>
+          </div>
+        </nav>
+
+        <div class="page-content">
+          <div class="list no-hairlines">
+            <ul>
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Title</div>
+                  <div class="item-input-wrap">
+                    <input aria-label="title" type="text" id="ne-title" placeholder="Soccer 3v3">
+                    <span class="input-clear-button"></span>
+                  </div>
+                </div>
+              </li>
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Where?</div>
+                  <div class="item-input-wrap">
+                    <input aria-label="address" type="text" id="ne-address" placeholder="Address">
+                    <span class="input-clear-button"></span>
+                  </div>
+                </div>
+              </li>
+
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">When?</div>
+                  <div class="item-input-wrap">
+                    <input aria-label="date and time" type="text" placeholder="Select date and time"
+                            readonly="readonly" id="ne-time"/>
+                  </div>
+                </div>
+              </li>
+
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label margin-bottom">Max players?</div>
+                  <div class="stepper stepper-raised">
+                    <div class="stepper-button-minus"></div>
+                    <div class="stepper-input-wrap">
+                      <input aria-label="max players" id="ne-max-players" type="text" value="0" readonly>
+                    </div>
+                    <div class="stepper-button-plus"></div>
+                  </div>
+                </div>
+              </li>
+
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Additional info</div>
+                  <div class="item-input-wrap">
+                    <textarea aria-label="additional info" placeholder="Bring a soccer ball..."
+                              id="ne-additional-info"></textarea>
+                  </div>
+                </div>
+              </li>
+
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <button aria-label="create event" @click="createNewEvent()" id='create-event-btn'
+                      class="button button-fill button-round">Create</button>
+                </div>
+              </li>
+
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</template>
+<script>
+  import $$ from 'dom7'
+import moment from 'moment'
+import ApiService from '../js/ApiService.js'
+
+export default {
+
+    data: function () {
+      return {
+
+      }
+    },
+    methods: {
+      createNewEvent () {
+        const self = this
+        const app = self.$app
+
+        const data = {
+          title: $$('#ne-title').val(),
+          where: $$('#ne-address').val(),
+          when: moment($$('#ne-time').val()).unix(),
+          max_players: $$('#ne-max-players').val(),
+          additional_info: $$('#ne-additional-info').val()
+        }
+
+        if (data.title === '' || data.where === '' || isNaN(data.when)) {
+          app.toast.create({
+            text: 'When or where cannot be empty',
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+          return
+        }
+
+        app.preloader.show()
+        ApiService.post('events/new_event', data, function (data) {
+          console.log('SUCCESS', data.msg)
+          app.preloader.hide()
+          app.toast.create({
+            text: data.msg,
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+          app.emit('refreshEvents')
+          $$('.popup-close').click()
+        }, function (data) {
+          console.log('ERROR', data.msg)
+          app.preloader.hide()
+          app.dialog.alert('Error creating new event').open(true)
+        })
+      }
+    },
+    on: {
+      popupOpen: function () {
+        const self = this
+        const app = self.$app
+
+        const stepper = app.stepper.create({ // eslint-disable-line no-unused-vars
+          el: '.stepper',
+          inputEl: '#ne-max-players',
+          step: 1,
+          min: 0,
+          value: 0
+        })
+        var yesterday = new Date()
+        yesterday.setDate(yesterday.getDate() - 1)
+        const calendarDateTime = app.calendar.create({ // eslint-disable-line no-unused-vars
+          locale: 'en-US',
+          inputEl: '#ne-time',
+          timePicker: true,
+          openIn: 'customModal',
+          header: true,
+          footer: true,
+          dateFormat: { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' },
+          on: {
+            opened: function () {
+              document.querySelector('.calendar-month-current .calendar-day-today').id = 'current-day'
+            }
+          }
+        })
+      }
+    }
+  }
+</script>

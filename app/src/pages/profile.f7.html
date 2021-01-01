@@ -1,0 +1,402 @@
+<template>
+  <div class="popup" role="main" id="profile-page">
+    <div class="view">
+      <div class="page">
+        <nav class="navbar">
+          <div class="navbar-bg"></div>
+          <div class="navbar-inner sliding">
+            <div class="left margin-left-half popup-close">
+              <i class="f7-icons font-16">xmark</i>
+              <span class="font-16"> Close </span>
+            </div>
+            <h1 class="title">Profile</h1>
+            <div class="right margin-right">
+              <a class="#" @click="saveProfileInfo()">
+                Save
+              </a>
+            </div>
+          </div>
+        </nav>
+        <div class="page-content">
+          <div class="row no-gap no-padding-bottom no-margin-bottom">
+            <div class="col-40">
+              <div class="display-flex justify-content-center margin-top">
+                <img src="../static/images/placeholder.png" alt="profile image" id="profile-img" class="text-align-center br-50"
+                height="100" width="100"/>
+              </div>
+              <form id="upload-img" method="post" enctype="multipart/form-data">
+                <input class="display-none" type="file" id="file" name="file" accept="image/*" @change="desktopImagePicker()">
+                <button type="button" class="button text-align-center" @click="updateProflileImage()">Update</button>
+              </form>
+            </div>
+            <div class="col-60">
+              <div class="list no-hairlines margin-top-half">
+                <ul class="profile-round-text">
+                  <li class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title item-label">First name</div>
+                      <div class="item-input-wrap">
+                        <input aria-label="first name" type="text" id="first-name" value="{{user.first_name}}" placeholder="Your first name">
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </li>
+                  <li class="item-content item-input">
+                    <div class="item-inner">
+                      <div class="item-title item-label">Last name</div>
+                      <div class="item-input-wrap">
+                        <input aria-label="last name" type="text" id="last-name" value="{{user.last_name}}" placeholder="Your last name">
+                        <span class="input-clear-button"></span>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="list no-hairlines no-margin-top no-">
+            <ul>
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Current job</div>
+                  <div class="item-input-wrap">
+                    <input aria-label="current job"type="text" id="current-job" value="{{user.current_job}}" placeholder="Your current job">
+                    <span class="input-clear-button"></span>
+                  </div>
+                </div>
+              </li>
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">Current zip</div>
+                  <div class="item-input-wrap">
+                    <input aria-label="current zip" type="text" id="current-zip" value="{{user.current_zip}}" placeholder="Your current zip">
+                    <span class="input-clear-button"></span>
+                  </div>
+                </div>
+              </li>
+              <li class="item-content item-input">
+                <div class="item-inner">
+                  <div class="item-title item-label">About Me</div>
+                  <div class="item-input-wrap">
+                    <textarea aria-label="about me" placeholder="Bio" value="{{user.about_me}}" id="about-me"></textarea>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-align-center font-16">Account settings</p>
+            <div class="display-block margin-horizontal">
+              <button class="button button-outline" type="button" id='update-email-btn'@click="updateEmail()">Update email</button>
+              <button class="button button-outline margin-top" id='update-password-btn' @click="updatePassword()">Update password</button>
+            </div>
+          </div>
+
+          <br />
+          <br />
+          <br />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  import $$ from 'dom7'
+  import ApiService from '../js/ApiService.js'
+  import Framework7 from 'framework7'
+  import { Plugins, CameraResultType, CameraSource } from '@capacitor/core'
+
+const { Camera } = Plugins
+
+export default {
+
+    data: function () {
+      return {
+        user: {}
+      }
+    },
+    methods: {
+      saveProfileInfo: function () {
+        const self = this
+        const app = self.$app
+
+        const data = {
+          first_name: $$('#first-name').val(),
+          last_name: $$('#last-name').val(),
+          current_job: $$('#current-job').val(),
+          current_zip: $$('#current-zip').val(),
+          about_me: $$('#about-me').val()
+        }
+        app.preloader.show()
+        ApiService.put('profile/', data, function (data) {
+          console.log('SUCCESS', data.msg)
+          app.preloader.hide()
+          app.toast.create({
+            text: 'Saved profile info',
+            position: 'center',
+            closeTimeout: 2000
+          }).open()
+        }, function (data) {
+          console.log('ERROR', data.msg)
+          app.preloader.hide()
+          app.dialog.alert('Error saving profile info').open(true)
+        })
+      },
+      getProfileInfo () {
+        const self = this
+        const app = self.$app
+
+        app.preloader.show()
+        ApiService.get('profile/', function (data) {
+          console.log('SUCCESS', data.msg)
+          app.preloader.hide()
+          self.$setState({ user: data.profile })
+          self.getProfileImage()
+        }, function (data) {
+          console.log('ERROR', data.msg)
+          app.preloader.hide()
+        })
+      },
+      getProfileImage () {
+        const self = this
+        const app = self.$app
+        const userId = self.user.id
+
+        fetch(ApiService.getApiEndpoint() + 'profile/get_profile_image/' + userId, {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store'
+        })
+        .then(res => {
+          if (res.status === 200) {
+            return res.blob()
+          }
+        })
+        .then(blob => {
+          var reader = new FileReader()
+          reader.readAsDataURL(blob)
+          reader.onloadend = function () {
+            app.preloader.hide()
+            $$('#profile-img').attr('src', reader.result)
+          }
+        })
+        .catch(error => {
+          console.log('ERROR', error)
+        })
+      },
+      updateProflileImage () {
+        const self = this
+        const app = self.$app
+        if (app.device.desktop) {
+          $$('#file').click()
+        } else if (app.device.ios || app.device.android) {
+          self.getMobilePicture()
+        }
+      },
+      async getMobilePicture () {
+        const self = this
+
+        const image = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: true,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Photos
+        })
+
+        console.log('SUCCESS getting image')
+        const imageFile = self.dataURItoFile(image.dataUrl, 'profile_image.jpeg')
+        const formData = new FormData()
+        formData.set('file', imageFile, 'profile_image.jpeg')
+        self.saveProfileImage(formData)
+      },
+      dataURItoFile (dataurl, filename) {
+        var arr = dataurl.split(',')
+        var mime = arr[0].match(/:(.*?);/)[1]
+        var bstr = atob(arr[1])
+        var n = bstr.length
+        var u8arr = new Uint8Array(n)
+
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n)
+        }
+
+        return new File([u8arr], filename, { type: mime })
+      },
+      desktopImagePicker () {
+        const self = this
+        const formData = new FormData(document.getElementById('upload-img'))
+        self.saveProfileImage(formData)
+      },
+      saveProfileImage (formData) {
+        const self = this
+        const app = self.$app
+        
+        app.preloader.show()
+        ApiService.put('profile/profile_image', formData, function(data) {
+          console.log("SUCCESS", data.msg)
+          app.preloader.hide()
+          app.toast.create({
+              text: 'Saved profile image',
+              position: 'center',
+              closeTimeout: 2000
+            }).open()
+            self.getProfileImage()
+        }, function(data) {
+          console.log('ERROR', data.msg)
+            app.preloader.hide()
+            app.toast.create({
+              text: data.msg,
+              position: 'center',
+              closeTimeout: 2000
+            }).open()
+        })
+      },
+      updateEmail () {
+        const self = this
+        const app = self.$app
+
+        const dialogContent = `
+          <div class="dialog-input-field item-input">
+            <div class="item-input-wrap">
+              <input type="text" id='update-email' class="dialog-input">
+            </div>
+          </div>
+        `
+
+        app.dialog.create({
+          closeByBackdropClick: true,
+          title: 'Update your password',
+          text: 'Make sure to make your password strong!',
+          content: dialogContent,
+          buttons: [
+            {
+              text: 'Cancel'
+            },
+            {
+              text: 'Update',
+              bold: true
+            }
+          ],
+          onClick: function (dialog, index) {
+            if (index === 1) {
+              const email = $$('#update-email').val()
+              if (email.length === 0) {
+                app.dialog.alert('Email cannot be empty', function () {
+                  dialog.open()
+                }).open()
+              } else {
+                const data = {
+                  email: email
+                }
+                app.preloader.show()
+                ApiService.put('auth/update_email', data, function (data) {
+                  console.log('SUCCESS', data.msg)
+                  app.preloader.hide()
+                  app.toast.create({
+                    text: data.msg,
+                    position: 'center',
+                    closeTimeout: 2000,
+                    destroyOnClose: true
+                  }).open()
+                }, function (data) {
+                  console.log('ERROR', data.msg)
+                  app.preloader.hide()
+                  app.toast.create({
+                    text: data.msg,
+                    position: 'center',
+                    closeTimeout: 2000,
+                    destroyOnClose: true,
+                    on: {
+                      close: function () {
+                        dialog.open()
+                      }
+                    }
+                  }).open()
+                })
+              }
+            }
+          }
+        }).open()
+      },
+      updatePassword () {
+        const self = this
+        const app = self.$app
+
+        const dialogContent = `
+          <div class="dialog-input-field item-input">
+            <div>
+              <input type="password" placeholder='current password' id='current-password' class="dialog-input">
+            </div>
+            <div class="item-input-wrap">
+              <input type="password" placeholder='new password' id='new-password' class="dialog-input">
+            </div>
+          </div>
+        `
+
+        app.dialog.create({
+          closeByBackdropClick: true,
+          title: 'Update your password',
+          text: 'Make sure to make your password strong!',
+          content: dialogContent,
+          buttons: [
+            {
+              text: 'Cancel'
+            },
+            {
+              text: 'Update',
+              bold: true
+            }
+          ],
+          onClick: function (dialog, index) {
+            if (index === 1) {
+              const currentPassword = $$('#current-password').val()
+              const newPassword = $$('#new-password').val()
+              if (currentPassword.length === 0 || newPassword.length === 0) {
+                app.dialog.alert('Current password or New password cannot be empty', function () {
+                  dialog.open()
+                }).open()
+              } else {
+                const data = {
+                  current_password: currentPassword,
+                  new_password: newPassword
+                }
+                app.preloader.show()
+                ApiService.put('auth/update_password', data, function (data) {
+                  console.log('SUCCESS', data.msg)
+                  app.preloader.hide()
+                  app.toast.create({
+                    text: data.msg,
+                    position: 'center',
+                    closeTimeout: 2000,
+                    destroyOnClose: true
+                  }).open()
+                }, function (data) {
+                  console.log('ERROR', data.msg)
+                  app.preloader.hide()
+                  app.toast.create({
+                    text: data.msg,
+                    position: 'center',
+                    closeTimeout: 2000,
+                    destroyOnClose: true,
+                    on: {
+                      close: function () {
+                        dialog.open()
+                      }
+                    }
+                  }).open()
+                })
+              }
+            }
+          }
+        }).open()
+      }
+    },
+    on: {
+      popupOpen: function () {
+        const self = this
+
+        self.getProfileInfo()
+      }
+    }
+  }
+</script>

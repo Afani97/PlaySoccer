@@ -1,0 +1,194 @@
+<template>
+    <div class="popup" id="edit-event-page">
+      <div class="view">
+        <div class="page">
+          <nav class="navbar">
+            <div class="navbar-bg"></div>
+            <div class="navbar-inner sliding">
+              <div class="left margin-left-half popup-close close-edit-page">
+                <i class="f7-icons font-16">xmark</i>
+                <span class="font-16"> Cancel </span>
+              </div>
+              <h1 class="title">Edit event</h1>
+            </div>
+          </nav>
+  
+          <div class="page-content">
+            <div class="list no-hairlines">
+              <ul>
+                <li class="item-content item-input">
+                  <div class="item-inner">
+                    <div class="item-title item-label">Title</div>
+                    <div class="item-input-wrap">
+                      <input aria-label="title" type="text" value="{{event.title}}" id="ee-title" placeholder="Soccer 3v3">
+                      <span class="input-clear-button"></span>
+                    </div>
+                  </div>
+                </li>
+                <li class="item-content item-input">
+                  <div class="item-inner">
+                    <div class="item-title item-label">Where?</div>
+                    <div class="item-input-wrap">
+                      <input aria-label="address" type="text" value="{{event.location}}" id="ee-address" placeholder="Address">
+                      <span class="input-clear-button"></span>
+                    </div>
+                  </div>
+                </li>
+  
+                <li class="item-content item-input">
+                  <div class="item-inner">
+                    <div class="item-title item-label">When?</div>
+                    <div class="item-input-wrap">
+                      <input aria-label="date and time" type="text" placeholder="Select date and time"
+                              readonly="readonly" id="ee-time"/>
+                    </div>
+                  </div>
+                </li>
+  
+                <li class="item-content item-input">
+                  <div class="item-inner">
+                    <div class="item-title item-label margin-bottom">Max players?</div>
+                    <div class="stepper stepper-raised">
+                      <div class="stepper-button-minus"></div>
+                      <div class="stepper-input-wrap">
+                        <input aria-label="max players" id="ee-max-players" type="text" value="0" readonly>
+                      </div>
+                      <div class="stepper-button-plus"></div>
+                    </div>
+                  </div>
+                </li>
+  
+                <li class="item-content item-input">
+                  <div class="item-inner">
+                    <div class="item-title item-label">Additional info</div>
+                    <div class="item-input-wrap">
+                      <textarea aria-label="additional info" value="{{event.description}}" placeholder="Bring a soccer ball..."
+                                id="ee-additional-info"></textarea>
+                    </div>
+                  </div>
+                </li>
+  
+                <li class="item-content item-input">
+                  <div class="item-inner">
+                    <button aria-label="create event" @click="editEvent()" id='edit-event-btn'
+                        class="button button-fill button-round">Update</button>
+                  </div>
+                </li>
+  
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+    </div>
+  </template>
+  <script>
+    import $$ from 'dom7'
+    import moment from 'moment'
+    import ApiService from '../js/ApiService.js'
+
+export default {
+
+      data: function () {
+        const params = this.$route.params
+        let eventId = ''
+        if (params.id) {
+          eventId = params.id
+        }
+        return {
+          eventId: eventId,
+          event: {}
+        }
+      },
+      methods: {
+        editEvent () {
+          const self = this
+          const app = self.$app
+
+          const data = {
+            title: $$('#ee-title').val(),
+            where: $$('#ee-address').val(),
+            when: moment($$('#ee-time').val()).unix(),
+            max_players: $$('#ee-max-players').val(),
+            additional_info: $$('#ee-additional-info').val()
+          }
+
+          if (data.title === '' || data.where === '' || isNaN(data.when)) {
+            app.toast.create({
+              text: 'When or where cannot be empty',
+              position: 'center',
+              closeTimeout: 2000
+            }).open()
+            return
+          }
+
+          app.preloader.show()
+          ApiService.put('events/' + self.event.id + '/edit', data, function (data) {
+            console.log('SUCCESS', data.msg)
+            app.preloader.hide()
+            $$('.close-edit-page').click()
+            app.emit('refreshMyEvents')
+            app.toast.create({
+              text: data.msg,
+              position: 'center',
+              closeTimeout: 2000
+            }).open()
+          }, function (data) {
+            console.log('ERROR', data.msg)
+            app.preloader.hide()
+            app.dialog.alert('Error creating new event').open(true)
+          })
+        },
+        getEventDetails () {
+          const self = this
+          const app = self.$app
+
+          app.preloader.show()
+          ApiService.get('events/' + self.eventId, function (data) {
+            console.log('SUCCESS', data.msg)
+            app.preloader.hide()
+            self.$setState({ event: data.event })
+            const cal = self.calendar
+            cal.setValue([moment.utc(data.event.timestamp)._d])
+            const step = self.stepper
+            step.setValue(data.event.member_limit_count || 0)
+          }, function (data) {
+            console.log('ERROR', data.msg)
+            app.preloader.hide()
+          })
+        }
+      },
+      on: {
+        popupOpen: function () {
+          const self = this
+          const app = self.$app
+
+          const stepper = app.stepper.create({ // eslint-disable-line no-unused-vars
+            el: '.stepper',
+            inputEl: '#ee-max-players',
+            step: 1,
+            min: 0,
+            value: 0
+          })
+
+          const yesterday = new Date()
+          yesterday.setDate(yesterday.getDate() - 1)
+          const calendarDateTime = app.calendar.create({ // eslint-disable-line no-unused-vars
+            inputEl: '#ee-time',
+            timePicker: true,
+            openIn: 'customModal',
+            header: true,
+            footer: true,
+            minDate: yesterday,
+            dateFormat: { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true },
+            timePickerFormat: { hour: 'numeric', minute: 'numeric', hour12: true }
+          })
+          self.$setState({ stepper: stepper, calendar: calendarDateTime })
+
+          self.getEventDetails()
+        }
+      }
+    }
+  </script>
+  

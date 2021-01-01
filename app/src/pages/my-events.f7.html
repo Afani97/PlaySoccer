@@ -1,0 +1,129 @@
+<template>
+  <div class="popup" id="my-events-page">
+    <div class="view">
+      <div class="page">
+        <div class="navbar">
+          <div class="navbar-bg"></div>
+          <div class="navbar-inner sliding">
+            <div class="left margin popup-close close-my-events">
+                <i class="f7-icons font-16">xmark</i>
+                <span class="font-16"> Close </span>
+            </div>
+            <h1 class="title">My events</h1>
+          </div>
+        </div>
+  
+        <div class="page-content" role="main">
+            <div class="list media-list no-hairlines margin-top-half">
+                <ul class="margin-horizontal-half round-li">
+                  {{#each events}}
+                  <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title-row">
+                            <div class="item-title">
+                              <a href="/view-event/{{id}}" class="item-link">{{title}}</a> 
+                            </div>
+                            <div class="item-after">
+                              <i class="f7-icons" @click="removeEvent('{{id}}')">xmark_circle</i>
+                            </div>
+                        </div>
+                        <div class="item-subtitle"> {{location}} </div>
+                        <div class="item-text margin-bottom font-500">{{formattedDate}}</div>
+                        {{#js_if "this.hideButton === false"}}
+                          <div>
+                            <button type="button" class="button button-fill button-small edit-btn event-btn"
+                                    @click="editEvent('{{@index}}')">
+                                Edit event
+                            </button>
+                          </div>
+                          {{/js_if}}
+                        </div>
+                    </div>
+                  </li>
+                  {{else}}
+                  <li>
+                    <div class="display-block padding-horizontal">
+                      <h1 class="text-align-center">No events found</h1>
+                      <button class="button button-fill button-round" @click="createNewEvent">
+                        Create a new event
+                      </button>
+                    </div>
+                  </li>
+                  {{/each}}
+                </ul>
+              </div>
+          </div>   
+        </div>
+      </div>
+    </div>
+</template>
+<script>
+  import moment from 'moment'
+  import ApiService from '../js/ApiService.js'
+
+export default {
+
+    data: function () {
+      return {
+        events: {}
+      }
+    },
+    methods: {
+      getMyEvents () {
+        const self = this
+        const app = self.$app
+
+        app.preloader.show()
+        ApiService.get('profile/events', function (data) {
+          console.log('SUCCESS', data.msg)
+          data.events.forEach(e => {
+            e.formattedDate = moment(e.timestamp).utc(true).format('lll')
+            e.hideButton = e.created_by !== self.userId
+          })
+          self.$setState({ events: data.events })
+          app.preloader.hide()
+        }, function (data) {
+          console.log('ERROR', data.msg)
+          app.preloader.hide()
+        })
+      },
+      editEvent (eventIndex) {
+        const self = this
+        const event = self.events[eventIndex]
+        self.$f7router.navigate({
+          name: 'edit-event',
+          params: { id: event.id }
+        })
+      },
+      createNewEvent () {
+        const self = this
+        self.$f7router.navigate({ name: 'new-event' })
+      },
+      removeEvent (eventId) {
+        const self = this
+        ApiService.delete('events/' + eventId + '/delete', function (data) {
+          console.log('SUCCESS', data.msg)
+          self.getMyEvents()
+        }, function (data) {
+          console.log('ERROR', data.msg)
+        })
+      }
+    },
+    on: {
+      popupOpen: function () {
+        const self = this
+        const app = self.$app
+
+        self.$setState({ userId: window.sessionStorage.getItem('userId') })
+
+        self.getMyEvents()
+
+        app.on('refreshMyEvents', function () {
+          self.getMyEvents()
+        })
+      }
+    }
+  }
+</script>
+  
